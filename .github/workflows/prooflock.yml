@@ -2,9 +2,9 @@ name: ProofLock Integrity & Gatekeeper
 
 on:
   push:
-    branches: [ "dev" ]    # Auto-update ledger hashes on dev
+    branches: [ "dev" ]    # Auto-update ledger on dev
   pull_request:
-    branches: [ "main" ]   # Enforce strict validation on main
+    branches: [ "main" ]   # Enforce on main
 
 jobs:
   prooflock:
@@ -27,6 +27,7 @@ jobs:
         run: |
           if [ ! -f prooflock/ledger.json ]; then
             echo "❌ No ledger.json found. ClauseWitch blocks merge."
+            echo "🚨 RoosterOps: ProofLock blocked a merge (no ledger.json)" >> prooflock/rooster_log.txt
             exit 1
           fi
 
@@ -62,5 +63,5 @@ jobs:
           git config --global user.name 'KenPire ProofLock Bot'
           git config --global user.email 'security@kenpire.ai'
           git add prooflock/ledger.json prooflock/rooster_log.txt
-          git commit -m "🔒 ProofLock auto-update (dev)"
+          git commit -m "🔒 ProofLock auto-update (dev)" || echo "No changes"
           git push
