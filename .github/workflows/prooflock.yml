@@ -1,0 +1,66 @@
+name: ProofLock Integrity & Gatekeeper
+
+on:
+  push:
+    branches: [ "dev" ]    # Auto-update ledger hashes on dev
+  pull_request:
+    branches: [ "main" ]   # Enforce strict validation on main
+
+jobs:
+  prooflock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Generate fresh hashes
+        run: |
+          mkdir -p prooflock
+          sha256sum scripts/*.py > prooflock/fresh_hashes.txt
+          sha256sum data/*.csv >> prooflock/fresh_hashes.txt
+
+      - name: Validate ProofLock Ledger (PR to main)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ ! -f prooflock/ledger.json ]; then
+            echo "❌ No ledger.json found. ClauseWitch blocks merge."
+            exit 1
+          fi
+
+          jq -r '.entries[] | "\(.file) \(.hash)"' prooflock/ledger.json > prooflock/ledger_hashes.txt
+
+          while read -r hash file; do
+            ledger_line=$(grep "$file" prooflock/ledger_hashes.txt || true)
+            if [ -z "$ledger_line" ]; then
+              echo "❌ $file not in ledger.json — BLOCKED"
+              echo "🚨 RoosterOps: ProofLock blocked a merge (missing file: $file)" >> prooflock/rooster_log.txt
+              exit 1
+            fi
+            ledger_hash=$(echo "$ledger_line" | awk '{print $2}')
+            if [ "$hash" != "$ledger_hash" ]; then
+              echo "❌ Hash mismatch for $file — BLOCKED"
+              echo "Expected: $ledger_hash"
+              echo "Found:    $hash"
+              echo "🚨 RoosterOps: ProofLock blocked a merge (hash mismatch: $file)" >> prooflock/rooster_log.txt
+              exit 1
+            fi
+          done < prooflock/fresh_hashes.txt
+
+          echo "✅ ProofLock validation passed — merge allowed."
+          echo "RoosterOps: Integrity preserved, no blocks today." >> prooflock/rooster_log.txt
+
+      - name: Auto-update ledger (push to dev)
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          echo "🔄 Updating ProofLock ledger on dev branch..."
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          entries=$(cat prooflock/fresh_hashes.txt | awk '{print "{ \"file\": \""$2"\", \"hash\": \""$1"\", \"timestamp\": \""ts"\" }," }' ts=$ts)
+          echo "{ \"repo\": \"${GITHUB_REPOSITORY}\", \"last_updated\": \"$ts\", \"entries\": [${entries%?}] }" > prooflock/ledger.json
+          git config --global user.name 'KenPire ProofLock Bot'
+          git config --global user.email 'security@kenpire.ai'
+          git add prooflock/ledger.json prooflock/rooster_log.txt
+          git commit -m "🔒 ProofLock auto-update (dev)"
+          git push
