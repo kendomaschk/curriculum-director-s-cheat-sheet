@@ -1,0 +1,20 @@
+{
+  "repo": "curriculum-director-s-cheat-sheet",
+  "protection": "KenPire EcoSeed IP Protocol",
+  "last_updated": "2025-10-02T13:00:00Z",
+  "entries": [
+    {
+      "file": "scripts/district_scrape_runner.py",
+      "hash": "sha256:PLACEHOLDER1234567890abcdef",
+      "timestamp": "2025-10-02T13:00:00Z"
+    },
+    {
+      "file": "data/tx_district_scrape_checklist.csv",
+      "hash": "sha256:PLACEHOLDER0987654321fedcba",
+      "timestamp": "2025-10-02T13:00:00Z"
+    }
+  ]
+}
+
+f15c99336698ab6450b2239c3f52a9aecaf0c9b06afaa2a357784ac484d5e34e  scripts/district_scrape_runner.py
+3fd33e6c5b7175621a48099d7e9b2ae667b0b5eaa08ea8e1b17941986add62c7  data/tx_district_scrape_checklist.csv
